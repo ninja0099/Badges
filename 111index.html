@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nuvio Badge Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #111214;
+    --surface: #191b1e;
+    --surface2: #1f2124;
+    --border: #2e3138;
+    --border-bright: #3d4148;
+    --text: #e2e4e8;
+    --text-dim: #9aa0b0;
+    --text-muted: #757c8c;
+    --accent: #e8a030;
+    --accent2: #5bb8d4;
+    --accent3: #e8d030;
+    --green: #3dba6a;
+    --red: #e05555;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.15;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #131517 0%, transparent 100%);
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  .logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px rgba(232,160,48,0.7);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .logo-title { color: var(--text); font-size: 15px; }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.08em; cursor: pointer;
+    border: 1px solid var(--border-bright);
+    background: var(--surface2); color: var(--text-dim);
+    transition: all 0.2s; text-transform: uppercase;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,160,48,0.08); }
+  .btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+  .btn.primary:hover { background: #f0b040; border-color: #f0b040; }
+  .btn.success { background: #1e2e22; color: var(--green); border-color: rgba(61,186,106,0.3); }
+
+  /* ─── LAYOUT ─── */
+  .app {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: calc(100vh - 61px);
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    background: var(--surface);
+    max-height: calc(100vh - 61px);
+    overflow: hidden; /* children handle their own scroll */
+  }
+
+  /* ─── SIDEBAR SPLIT PANELS ─── */
+  .sidebar-top {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .sidebar-bottom {
+    flex-shrink: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: none;
+  }
+  .sidebar.editing .sidebar-bottom {
+    max-height: 60vh;
+    overflow-y: auto;
+    border-top: 2px solid rgba(232,160,48,0.3);
+  }
+
+  .sidebar-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* ─── GLOBAL STYLE CONTROLS ─── */
+  .control-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .control-label {
+    font-size: 12px; color: var(--text-dim); font-family: 'Space Mono', monospace;
+  }
+
+  .toggle-group {
+    display: flex; border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .toggle-btn {
+    padding: 5px 10px; font-size: 11px;
+    font-family: 'Space Mono', monospace; font-weight: 700;
+    background: transparent; color: var(--text-muted);
+    border: none; cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active { background: var(--accent); color: #fff; }
+
+  .slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
+  input[type=range] {
+    -webkit-appearance: none; flex: 1; height: 3px;
+    background: var(--border-bright); border-radius: 99px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent3); cursor: pointer;
+    box-shadow: 0 0 8px rgba(232,208,48,0.5);
+  }
+  .slider-val {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--accent3); min-width: 28px; text-align: right;
+  }
+
+  .color-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 8px;
+  }
+  .color-swatch {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-bright);
+    background: var(--surface2); cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .color-swatch:hover { border-color: var(--accent); }
+  .color-swatch label { font-size: 10px; color: var(--text-dim); cursor: pointer; }
+  input[type=color] { width: 20px; height: 20px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 3px; }
+
+  /* ─── FILTER LIST ─── */
+  .filter-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .group-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 4px;
+  }
+  .group-header:hover { border-color: var(--border-bright); }
+  .group-name {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; color: var(--text);
+  }
+  .group-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .group-chevron { color: var(--text-muted); font-size: 10px; transition: transform 0.2s; }
+  .group-chevron.open { transform: rotate(90deg); }
+
+  .filter-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: var(--radius-sm);
+    border: 1px solid transparent; cursor: pointer;
+    transition: all 0.15s; background: transparent;
+    margin-left: 14px;
+  }
+  .filter-item:hover { background: var(--surface2); border-color: var(--border); }
+  .filter-item.selected { background: rgba(232,160,48,0.08); border-color: rgba(232,160,48,0.35); }
+
+  .filter-thumb {
+    width: 28px; height: 14px; object-fit: contain;
+    filter: brightness(0.9);
+  }
+  .filter-name { font-size: 11px; color: var(--text); flex: 1; }
+  .filter-toggle {
+    width: 28px; height: 16px; border-radius: 99px;
+    background: var(--border-bright); position: relative;
+    transition: background 0.2s; flex-shrink: 0;
+  }
+  .filter-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--text-muted); transition: all 0.2s;
+  }
+  .filter-toggle.on { background: var(--green); }
+  .filter-toggle.on::after { left: 14px; background: #fff; }
+
+  /* ─── MAIN AREA ─── */
+  .main {
+    display: flex; flex-direction: column;
+    overflow-y: auto; max-height: calc(100vh - 61px);
+  }
+
+  /* ─── PREVIEW BAR ─── */
+  .preview-bar {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .preview-bar-label {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text-muted); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .preview-stream-name {
+    font-size: 11px; font-family: 'Space Mono', monospace;
+    color: var(--text-dim); background: var(--surface2);
+    border: 1px solid var(--border-bright); border-radius: var(--radius-sm);
+    padding: 7px 12px; outline: none; width: 100%; margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .preview-stream-name:focus { border-color: var(--accent2); color: var(--text); }
+
+  /* ─── LIVE PREVIEW CANVAS ─── */
+  .preview-canvas {
+    flex: 1; padding: 32px;
+    background: radial-gradient(ellipse at 30% 40%, rgba(232,160,48,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(91,184,212,0.03) 0%, transparent 50%),
+                var(--bg);
+  }
+
+  .preview-title {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text-muted); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .preview-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ─── NUVIO STREAM CARD ─── */
+  .stream-card {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    padding: 20px;
+    max-width: 680px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stream-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(232,160,48,0.3), transparent);
+  }
+  .stream-card-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px; line-height: 1.4;
+  }
+  .stream-card-meta {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text-muted); margin-bottom: 12px;
+  }
+  .badge-row {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    transition: all 0.3s;
+  }
+
+  /* ─── BADGE CHIP ─── */
+  .badge-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px 3px 5px;
+    border-radius: 5px;
+    font-size: 11px; font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.2s;
+    animation: badgeIn 0.25s ease both;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .badge-chip:hover { transform: translateY(-1px); filter: brightness(1.15); }
+  @keyframes badgeIn {
+    from { opacity: 0; transform: scale(0.85) translateY(4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .badge-chip img {
+    height: 14px; width: auto; object-fit: contain;
+  }
+  .badge-chip.style-filled { border-width: 0; }
+  .badge-chip.style-bordered { background: transparent !important; border-width: 1px; border-style: solid; }
+  .badge-chip.style-filled-bordered { border-width: 1px; border-style: solid; }
+  .badge-chip.size-sm { padding: 2px 6px 2px 4px; font-size: 9px; }
+  .badge-chip.size-sm img { height: 11px; }
+  .badge-chip.size-lg { padding: 5px 12px 5px 8px; font-size: 13px; }
+  .badge-chip.size-lg img { height: 18px; }
+  .badge-chip.round { border-radius: 99px; }
+  .badge-chip.square { border-radius: 2px; }
+
+  /* ─── ALL BADGES GRID ─── */
+  .all-badges-section { margin-top: 8px; }
+  .badges-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 16px;
+    background: var(--surface2); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  /* ─── ADD BADGE FORM ─── */
+  .add-badge-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 8px;
+  }
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .form-input {
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); padding: 7px 10px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text); outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent2); }
+  .form-select {
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); padding: 7px 10px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text); outline: none;
+  }
+
+  /* ─── EXPORT PANEL ─── */
+  .export-area {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-top: 8px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--text-dim); max-height: 400px; overflow-y: auto;
+    line-height: 1.7; white-space: pre-wrap; word-break: break-all;
+  }
+  .export-area::-webkit-scrollbar { width: 4px; }
+  .export-area::-webkit-scrollbar-track { background: var(--surface); }
+  .export-area::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 99px; }
+
+  /* ─── TABS ─── */
+  .tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    background: var(--surface);
+  }
+  .tab {
+    padding: 12px 16px; font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.2s; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text-dim); }
+
+  .tab-content { display: none; padding: 24px; flex: 1; }
+  .tab-content.active { display: block; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1e2e22; border: 1px solid rgba(61,186,106,0.3);
+    color: var(--green); padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    animation: toastIn 0.3s ease both;
+    z-index: 9998; display: flex; align-items: center; gap: 8px;
+  }
+  @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 99px; }
+
+  .separator { height: 1px; background: var(--border); margin: 4px 0; }
+  .badge-count { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-muted); padding: 2px 5px; background: var(--surface2); border-radius: 3px; }
+
+  .inline-color { display: flex; align-items: center; gap: 6px; }
+  .color-preview { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+
+  /* ─── PATTERN FIELD ─── */
+  .pattern-textarea {
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); padding: 7px 10px;
+    font-family: 'Space Mono', monospace; font-size: 10px; line-height: 1.6;
+    color: var(--text); outline: none; resize: vertical;
+    min-height: 58px; width: 100%; transition: border-color 0.2s;
+    word-break: break-all;
+  }
+  .pattern-textarea:focus { border-color: var(--accent2); }
+  .pattern-textarea.invalid { border-color: var(--red); }
+  .match-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px; letter-spacing: 0.05em;
+    background: var(--surface2); color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .match-status.match   { background: rgba(61,186,106,0.12); color: var(--green); }
+  .match-status.nomatch { background: rgba(224,85,85,0.12);  color: var(--red); }
+  .match-status.error   { background: rgba(232,160,48,0.12); color: var(--accent); }
+
+  /* ─── ALPHA INPUT ─── */
+  .color-swatch-wrap {
+    display: flex; gap: 5px; align-items: stretch;
+  }
+  .alpha-input {
+    width: 36px; text-align: center; padding: 0 4px;
+    font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); color: var(--accent2); outline: none;
+    text-transform: uppercase; transition: border-color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .alpha-input:focus { border-color: var(--accent2); }
+  .alpha-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 2px; }
+
+  .selected-indicator {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--accent); padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(232,160,48,0.05);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .btn-delete {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+    border: 1px solid rgba(224,85,85,0.35);
+    background: rgba(224,85,85,0.08); color: var(--red);
+    transition: all 0.2s; text-transform: uppercase; flex-shrink: 0;
+  }
+  .btn-delete:hover { background: rgba(224,85,85,0.18); border-color: var(--red); }
+
+  /* Search/filter input */
+  .badge-search {
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm); padding: 6px 10px;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--text); outline: none; width: 100%;
+    margin-bottom: 10px; transition: border-color 0.2s;
+  }
+  .badge-search:focus { border-color: var(--accent2); }
+  .badge-search::placeholder { color: var(--text-muted); }
+
+  /* Drag handle */
+  .drag-handle {
+    cursor: grab; color: var(--text-muted); font-size: 10px;
+    padding: 0 2px; opacity: 0.5; transition: opacity 0.15s; flex-shrink: 0;
+    user-select: none;
+  }
+  .filter-item:hover .drag-handle { opacity: 1; }
+  .filter-item.dragging { opacity: 0.4; border-style: dashed; }
+  .filter-item.drag-over { border-color: var(--accent2); background: rgba(91,184,212,0.07); }
+
+  /* Undo button */
+  .btn-undo {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-weight: 700; cursor: pointer;
+    border: 1px solid var(--border-bright);
+    background: var(--surface2); color: var(--text-muted);
+    transition: all 0.2s; text-transform: uppercase;
+  }
+  .btn-undo:hover:not(:disabled) { border-color: var(--accent2); color: var(--accent2); }
+  .btn-undo:disabled { opacity: 0.35; cursor: not-allowed; }
+  .edit-panel {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ─── MOBILE CONTROLS ─── */
+  .mobile-menu-btn {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 34px; height: 34px; flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-bright);
+    background: var(--surface2); color: var(--text-dim);
+    cursor: pointer; font-size: 16px; line-height: 1;
+    transition: all 0.2s;
+  }
+  .mobile-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 200;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .sidebar-overlay.open { display: block; }
+
+  .sidebar-close-btn {
+    display: none;
+    align-items: center; gap: 8px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-weight: 700; color: var(--text-muted);
+    cursor: pointer; background: var(--surface2);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    transition: color 0.2s; user-select: none;
+  }
+  .sidebar-close-btn:hover { color: var(--text); }
+
+  /* ─── RESPONSIVE — 768px ─── */
+  @media (max-width: 768px) {
+    .mobile-menu-btn { display: flex; }
+    .sidebar-close-btn { display: flex; }
+
+    header { padding: 10px 14px; gap: 8px; }
+    .logo-title { display: none; }
+
+    .app {
+      grid-template-columns: 1fr;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* Sidebar becomes a fixed slide-in drawer */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: min(360px, 88vw);
+      height: 100dvh;
+      max-height: 100dvh;
+      z-index: 300;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 4px 0 32px rgba(0,0,0,0.5);
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    /* Main fills full width */
+    .main { max-height: none; overflow-y: visible; }
+
+    /* Tabs — scrollable, no wrap */
+    .tabs { overflow-x: auto; padding: 0 12px; scrollbar-width: none; -ms-overflow-style: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { white-space: nowrap; padding: 12px 12px; }
+
+    /* Reduce canvas padding */
+    .preview-canvas { padding: 14px; }
+    .preview-bar { padding: 10px 14px; }
+
+    /* Collapse 2-col form grid */
+    .form-grid { grid-template-columns: 1fr; }
+
+    /* Export load/save cards */
+    .export-ld-sv { grid-template-columns: 1fr !important; }
+
+    /* Stream cards full width */
+    .stream-card { max-width: 100%; }
+
+    /* Add badge section no extra margin */
+    .add-badge-section { max-width: 100% !important; margin-top: 0; }
+
+    /* Toast full-width on mobile */
+    .toast { bottom: 16px; left: 14px; right: 14px; width: auto; }
+  }
+
+  /* ─── RESPONSIVE — 480px ─── */
+  @media (max-width: 480px) {
+    header { padding: 8px 10px; }
+    .logo span:first-child { display: none; } /* hide NUVIO· text, keep dot */
+    .header-actions { gap: 3px; }
+
+    /* Collapse button text, keep only icon/emoji */
+    .btn-label { display: none; }
+    .btn { padding: 6px 9px; font-size: 10px; }
+    .btn-undo { padding: 5px 8px; font-size: 10px; }
+
+    /* Hide lowest-priority header buttons */
+    .btn-reset-hide { display: none !important; }
+
+    /* Color row single column */
+    .color-row { grid-template-columns: 1fr; }
+
+    .preview-canvas { padding: 10px; }
+    .preview-bar { padding: 8px 10px; }
+    .tab { padding: 10px 10px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <span>NUVIO</span>
+    <span style="color:var(--border-bright)">·</span>
+    <span class="logo-title">BADGE STUDIO</span>
+  </div>
+  <div class="header-actions">
+    <button class="mobile-menu-btn" onclick="openSidebar()" title="Open controls" aria-label="Open sidebar">☰</button>
+    <button class="btn-undo" id="undoBtn" onclick="undo()" disabled title="Undo last change (Ctrl+Z)">↩ <span class="btn-label">Undo</span></button>
+    <button class="btn btn-reset-hide" onclick="resetAll()">↺ <span class="btn-label">Reset</span></button>
+    <button class="btn" onclick="triggerLoad()" title="Load a badges JSON file from disk">⬆ <span class="btn-label">Load JSON</span></button>
+    <button class="btn" onclick="exportJSON()" id="exportBtn">⬇ <span class="btn-label">Save JSON</span></button>
+    <button class="btn primary" onclick="copyJSON()">⎘ <span class="btn-label">Copy JSON</span></button>
+  </div>
+</header>
+<input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="loadJSONFile(event)" />
+
+<div class="app">
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+
+    <div class="sidebar-close-btn" onclick="closeSidebar()">✕ <span>Close</span></div>
+
+
+    <div class="sidebar-top">
+    <!-- Global Style -->
+    <div class="sidebar-section">
+      <div class="section-label">Global Style</div>
+
+      <div class="control-row">
+        <span class="control-label">Shape</span>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setGlobal('shape','default',this)">Default</button>
+          <button class="toggle-btn" onclick="setGlobal('shape','round',this)">Round</button>
+          <button class="toggle-btn" onclick="setGlobal('shape','square',this)">Square</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <span class="control-label">Size</span>
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setGlobal('size','sm',this)">SM</button>
+          <button class="toggle-btn active" onclick="setGlobal('size','md',this)">MD</button>
+          <button class="toggle-btn" onclick="setGlobal('size','lg',this)">LG</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <span class="control-label">Show Icons</span>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setGlobal('icons','on',this)">On</button>
+          <button class="toggle-btn" onclick="setGlobal('icons','off',this)">Off</button>
+        </div>
+      </div>
+
+      <div class="control-row" style="margin-bottom:0">
+        <span class="control-label">Opacity</span>
+        <div class="slider-wrap">
+          <input type="range" min="30" max="100" value="100" oninput="setGlobal('opacity',this.value);document.getElementById('opVal').textContent=this.value+'%'" />
+          <span class="slider-val" id="opVal">100%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Badge Filter List -->
+    <div class="sidebar-section" style="padding-bottom:0">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        Badges
+        <span class="badge-count" id="badgeCount">0 badges</span>
+      </div>
+      <input class="badge-search" id="badgeSearch" placeholder="Filter badges…" oninput="renderFilterList()" />
+      <div class="filter-list" id="filterList"></div>
+    </div>
+
+    </div>
+
+    <div class="sidebar-bottom">
+    <!-- Selected Badge Edit -->
+    <div id="editPanel">
+      <div class="selected-indicator" id="editTitle">
+        <span>✦ Editing: —</span>
+        <button class="btn-delete" onclick="deleteSelected()">✕ Delete</button>
+      </div>
+      <div class="edit-panel">
+        <div class="section-label">Edit Badge</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="form-field">
+            <div class="form-label">Name</div>
+            <input class="form-input" id="editName" oninput="updateSelected('name',this.value)" />
+          </div>
+          <div class="color-row">
+            <div class="form-field">
+              <div class="form-label">Tag Color</div>
+              <div class="color-swatch-wrap">
+                <div class="color-swatch" style="flex:1">
+                  <input type="color" id="editTagColor" oninput="onColorEdit('tagColor')" />
+                  <label>BG</label>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center">
+                  <input class="alpha-input" id="editTagAlpha" maxlength="2" placeholder="FF"
+                    oninput="onAlphaEdit('tagColor')" title="Alpha (00=transparent FF=opaque)" />
+                  <span class="alpha-label">alpha</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Text Color</div>
+              <div class="color-swatch-wrap">
+                <div class="color-swatch" style="flex:1">
+                  <input type="color" id="editTextColor" oninput="onColorEdit('textColor')" />
+                  <label>FG</label>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center">
+                  <input class="alpha-input" id="editTextAlpha" maxlength="2" placeholder="FF"
+                    oninput="onAlphaEdit('textColor')" title="Alpha (00=transparent FF=opaque)" />
+                  <span class="alpha-label">alpha</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Border Color</div>
+            <div class="color-swatch-wrap">
+              <div class="color-swatch" style="flex:1">
+                <input type="color" id="editBorderColor" oninput="onColorEdit('borderColor')" />
+                <label>Border</label>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <input class="alpha-input" id="editBorderAlpha" maxlength="2" placeholder="FF"
+                  oninput="onAlphaEdit('borderColor')" title="Alpha (00=transparent FF=opaque)" />
+                <span class="alpha-label">alpha</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Style</div>
+            <select class="form-select" id="editStyle" onchange="updateSelected('tagStyle',this.value)">
+              <option value="filled">Filled</option>
+              <option value="filled and bordered">Filled + Bordered</option>
+              <option value="bordered">Bordered Only</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Image URL</div>
+            <input class="form-input" id="editImageURL" oninput="updateSelected('imageURL',this.value)" placeholder="https://..." style="font-size:10px" />
+          </div>
+          <div class="form-field">
+            <div class="form-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+              <span>Pattern (Regex)</span>
+              <span class="match-status" id="patternMatchStatus">— test</span>
+            </div>
+            <textarea class="pattern-textarea" id="editPattern" rows="3"
+              oninput="debouncedPatternUpdate(this.value)"
+              spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <div class="main">
+    <div class="preview-bar">
+      <div class="preview-bar-label">Stream name simulator</div>
+      <input class="preview-stream-name" id="streamName"
+        value="Movie.Name.2024.2160p.BluRay.DV.HDR10.TrueHD.Atmos.7.1.REMUX"
+        placeholder="Type a stream name to test matching..."
+        oninput="updatePreview()" />
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('preview',this)">Preview</div>
+      <div class="tab" onclick="switchTab('all',this)">All Badges</div>
+      <div class="tab" onclick="switchTab('add',this)">+ Add New</div>
+      <div class="tab" onclick="switchTab('export',this)">Export</div>
+    </div>
+
+    <!-- PREVIEW TAB -->
+    <div class="tab-content active preview-canvas" id="tab-preview">
+      <div class="preview-title">Live Preview — Nuvio Stream Card</div>
+      <div class="stream-card">
+        <div class="stream-card-title" id="previewTitle">Movie Name (2024)</div>
+        <div class="stream-card-meta">Matched badges from stream name</div>
+        <div class="badge-row" id="previewBadges"></div>
+      </div>
+      <div class="preview-title" style="margin-top:32px">All Active Badges</div>
+      <div class="stream-card" style="max-width:none">
+        <div class="stream-card-meta">All enabled badges in your config</div>
+        <div class="badge-row" id="allActiveBadges"></div>
+      </div>
+    </div>
+
+    <!-- ALL BADGES TAB -->
+    <div class="tab-content preview-canvas" id="tab-all">
+      <div class="preview-title">All Badges by Group</div>
+      <div id="allBadgesContent"></div>
+    </div>
+
+    <!-- ADD NEW TAB -->
+    <div class="tab-content preview-canvas" id="tab-add">
+      <div class="preview-title">Add Custom Badge</div>
+      <div class="add-badge-section" style="max-width:560px">
+        <div class="form-grid">
+          <div class="form-field">
+            <div class="form-label">Badge Name</div>
+            <input class="form-input" id="newName" placeholder="e.g. HEVC" />
+          </div>
+          <div class="form-field">
+            <div class="form-label">Group</div>
+            <select class="form-select" id="newGroup"></select>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Tag Color</div>
+            <input type="color" class="form-input" id="newTagColor" value="#e8a030" style="height:38px;cursor:pointer" />
+          </div>
+          <div class="form-field">
+            <div class="form-label">Text Color</div>
+            <input type="color" class="form-input" id="newTextColor" value="#ffffff" style="height:38px;cursor:pointer" />
+          </div>
+          <div class="form-field">
+            <div class="form-label">Border Color</div>
+            <input type="color" class="form-input" id="newBorderColor" value="#e8a030" style="height:38px;cursor:pointer" />
+          </div>
+          <div class="form-field">
+            <div class="form-label">Style</div>
+            <select class="form-select" id="newStyle">
+              <option value="filled">Filled</option>
+              <option value="filled and bordered">Filled + Bordered</option>
+              <option value="bordered">Bordered Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:10px">
+          <div class="form-label">Regex Pattern</div>
+          <input class="form-input" id="newPattern" placeholder="(?i)\\bhevc\\b" style="font-family:'Space Mono',monospace;font-size:10px" />
+        </div>
+        <div class="form-field" style="margin-bottom:16px">
+          <div class="form-label">Image URL (optional)</div>
+          <input class="form-input" id="newImageURL" placeholder="https://raw.githubusercontent.com/..." style="font-size:10px" />
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div class="section-label" style="margin-bottom:0">Live Preview:</div>
+          <div id="newBadgePreview"></div>
+        </div>
+        <button class="btn primary" onclick="addBadge()" style="width:100%;justify-content:center;padding:10px">
+          + Add Badge to Config
+        </button>
+      </div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div class="tab-content preview-canvas" id="tab-export">
+      <div class="preview-title">Load / Save JSON</div>
+      <div class="export-ld-sv" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px;margin-bottom:24px">
+        <div style="background:var(--surface);border:1px solid var(--border-bright);border-radius:var(--radius);padding:18px">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px">Load from file</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5">Open any <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">.json</code> badge file from your disk.</div>
+          <button class="btn primary" onclick="triggerLoad()" style="width:100%;justify-content:center;padding:9px">Choose JSON File</button>
+          <div id="loadedFileName" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;min-height:14px"></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border-bright);border-radius:var(--radius);padding:18px">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px">Save to file</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5">Download your current config — edits and new badges included.</div>
+          <button class="btn" onclick="exportJSON()" style="width:100%;justify-content:center;padding:9px">Download nuvio-badges.json</button>
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center" id="badgeCountExport"></div>
+        </div>
+      </div>
+      <div class="preview-title">JSON Preview</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn primary" onclick="copyJSON()">Copy Full JSON</button>
+        <button class="btn" onclick="copyFiltersOnly()">Copy Filters Only</button>
+      </div>
+      <div class="export-area" id="exportArea"></div>
+    </div>  </div>
+</div>
+
+<script>
+// ─── INJECT DATA & BOOT ──────────────────────────────────
+const BADGES_DATA_INLINE = {"filters": [{"borderColor": "#FF00FF37", "groupId": "gq", "id": "q-r", "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-remux.png", "isEnabled": true, "name": "Remux", "pattern": "(?i)\\bremux\\b", "tagColor": "#E600E932", "tagStyle": "filled", "textColor": "#27C04F", "type": "filter"}, {"borderColor": "#FF00FF37", "groupId": "gq", "id": "q-b", "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-bluray.png", "isEnabled": true, "name": "BluRay", "pattern": "(?i)^(?=.*(?:bluray|blu-ray))(?!.*remux)", "tagColor": "#E600E932", "tagStyle": "filled", "textColor": "#27C04F", "type": "filter"}, {"borderColor": "#FF00FF37", "groupId": "gq", "id": "q-w", "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-webdl.png", "isEnabled": true, "name": "WebDL", "pattern": "(?i)\\b(?:web[-_. ]?dl|webdl)\\b", "tagColor": "#E600E932", "tagStyle": "filled", "textColor": "#27C04F", "type": "filter"}, {"borderColor": "#FF00FF37", "groupId": "gq", "id": "q-wr", "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-webrip.png", "isEnabled": true, "name": "WebRip", "pattern": "(?i)\\bweb[-_. ]?rip\\b", "tagColor": "#E600E932", "tagStyle": "filled", "textColor": "#27C04F", "type": "filter"}, {"borderColor": "#FF00FF37", "groupId": "gv", "id": "v-seadex", "imageURL": "https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/colored-SeaDex.png", "isEnabled": true, "name": "SeaDex", "pattern": "(?i)\\b(?:seadex|best[\\s._-]?release|alt[\\s._-]?(?:best[\\s._-]?)?release)\\b|\u1d00\u029f\u1d1b \u0280\u1d07\u029f\u1d07\u1d00s\u1d07|\u0299\u1d07s\u1d1b \u0280\u1d07\u029f\u1d07\u1d00s\u1d07", "tagColor": "#E600E932", "tagStyle": "filled", "textColor": "#27C04F", "type": "filter"}, {"groupId": "gr", "id": "r-4k", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/4k.png", "isEnabled": true, "name": "4K", "pattern": "(?i)^(?=.*(?:2160[pi]?|4k|uhd))(?!.*(?:1080[pi]?|720[pi]?))", "tagColor": "#FFBE01", "tagStyle": "filled", "textColor": "#FFBE01", "type": "filter", "borderColor": "#FFBE01"}, {"groupId": "gr", "id": "r-1080", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/1080p.png", "isEnabled": true, "name": "1080p", "pattern": "(?i)\\b1080[pi]?\\b", "tagColor": "#FF6904", "tagStyle": "filled", "textColor": "#FF9A3D", "type": "filter", "borderColor": "#FF6904"}, {"groupId": "gr", "id": "r-720", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/720p.png", "isEnabled": true, "name": "720p", "pattern": "(?i)\\b720[pi]?\\b", "tagColor": "#FB411C", "tagStyle": "filled", "textColor": "#FF9A3D", "type": "filter", "borderColor": "#FB411C"}, {"borderColor": "#c5ecfd", "groupId": "gv", "id": "a-dv", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DV.png", "isEnabled": true, "name": "DV", "pattern": "(?i)\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b", "tagColor": "#c5ecfd", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFBE01", "groupId": "gv", "id": "v-hdr10p", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR10Plus.png", "isEnabled": true, "name": "HDR10+", "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*hdr[\\s._-]?10[\\s._-]?(?:\\\\+|plus|p))", "tagColor": "#FFBE01", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFBE01", "groupId": "gv", "id": "v-hdr10", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR10.png", "isEnabled": true, "name": "HDR10", "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*hdr[\\s._-]?10)(?!.*hdr[\\s._-]?10[\\s._-]?(?:\\\\+|plus|p))", "tagColor": "#FFBE01", "tagStyle": "filled", "textColor": "#FFFFFF", "type": "filter"}, {"borderColor": "#FFBE01", "groupId": "gv", "id": "v-hdr", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR.png", "isEnabled": true, "name": "HDR", "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*\\bHDR\\b)(?!.*hdr[\\s._-]?10)", "tagColor": "#FFBE01", "tagStyle": "filled", "textColor": "#FFFFFF", "type": "filter"}, {"borderColor": "#FF858283", "groupId": "gv", "id": "v-imax-e", "imageURL": "https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/IMAX-enhanced.png", "isEnabled": true, "name": "IMAX Enhanced", "pattern": "(?i)\\bimax[\\s._-]?enhanced\\b", "tagColor": "#33FFFFFF", "tagStyle": "filled and bordered", "textColor": "#FFFFFF", "type": "filter"}, {"groupId": "gv", "id": "v-imax", "imageURL": "https://github.com/nobnobz/Omni-Template-Bot-Bid-Raiser/blob/main/Other/regex%20tags/IMAXv2.PNG?raw=true", "isEnabled": true, "name": "IMAX", "pattern": "(?i)^(?=.*\\bIMAX\\b)(?!.*enhanced)", "tagColor": "#FFBE01", "tagStyle": "filled", "textColor": "#FFBE01", "type": "filter", "borderColor": "#FFBE01"}, {"borderColor": "#00000000", "groupId": "gv", "id": "v-sdr", "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images/sdr.png", "isEnabled": true, "name": "SDR", "pattern": "(?i)\\bsdr\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#FFFFFF", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-th", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/TrueHD.png", "isEnabled": true, "name": "TrueHD", "pattern": "(?i)(?:\\btrue[ ._-]?hd\\b|^(?=.*\\batmos\\b)(?=.*\\bremux\\b)(?!.*\\b(?:true[ ._-]?hd|ddp|dd\\+|e-?ac3|eac3)\\b).+$)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-at", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/Atmos.png", "isEnabled": true, "name": "Atmos", "pattern": "(?i)^(?!.*\\btrue[ _\\.\\-]?hd\\b).*\\batmos\\b.*$", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dtsx", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsx.png", "isEnabled": true, "name": "DTS:X", "pattern": "(?i)\\bdts[-_.: ]?x\\b", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dtsma", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsHDMA.png", "isEnabled": true, "name": "DTS-HD MA", "pattern": "(?i)^(?=.*\\bdts[-_. ]?(?:hd[-_. ]?)?ma\\b)(?!.*\\bdts[-_.: ]?x\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dtshd", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsHD.png", "isEnabled": true, "name": "DTS-HD", "pattern": "(?i)^(?=.*\\bdts[-_. ]?hd\\b)(?!.*\\bdts[-_. ]?(?:hd[-_. ]?)?ma\\b)(?!.*\\bdts[-_.: ]?x\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dts", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dts.png", "isEnabled": true, "name": "DTS", "pattern": "(?i)^(?=.*\\bDTS\\b)(?!.*\\bdts[-_. ]?(?:hd|ma|xll|x)\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dp", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DDPLUS.png", "isEnabled": true, "name": "DD+", "pattern": "(?i)^(?=.*(?:\\bddp|\\bdd\\+|\\beac-?3|\\be-?ac-?3))(?!.*\\batmos\\b)(?!.*\\btrue[\\s._-]?hd\\b)(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "ga", "id": "a-dd", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DD.png", "isEnabled": true, "name": "DD", "pattern": "(?i)^(?=.*\\b(?:dd[25][. ][01]|dd[^p+a-z]\\b|\\bac-?3)\\b)(?!.*(?:\\bddp|\\bdd\\+|\\beac-?3|\\be-?ac-?3))(?!.*\\btrue[\\s._-]?hd\\b)(?!.*\\batmos\\b)(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#FFFFFF", "groupId": "gc", "id": "ch-71", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/71.png", "isEnabled": true, "name": "7.1", "pattern": "[^0-9][7-8][. ][01](?![0-9])", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"groupId": "gc", "id": "ch-61", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/61.png", "isEnabled": true, "name": "6.1", "pattern": "(?i)(?=.*[^0-9]6[ .][0-1]\\b)(?!.*[^0-9][7-8][ .][0-1]\\b)(?!.*[^0-9]5[ .][0-1]\\b)(?!.*(?<!repac)[^0-9][1-4][ .][0-1]\\b|\\\\b(Stereo|Mono)\\\\b)", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter", "borderColor": "#FFFFFF"}, {"borderColor": "#FFFFFF", "groupId": "gc", "id": "ch-51", "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/51.png", "isEnabled": true, "name": "5.1", "pattern": "^(?=.*[^0-9]5[. ][01](?![0-9]))(?!.*[^0-9][7-8][. ][01](?![0-9]))", "tagColor": "#FFFFFF", "tagStyle": "filled", "textColor": "#0e0e0e", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-en", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddec\ud83c\udde7", "pattern": "(?i)\\benglish\\b|\\beng\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-es", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddea\ud83c\uddf8", "pattern": "(?i)\\bspanish\\b|\\bspa\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-fr", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddeb\ud83c\uddf7", "pattern": "(?i)\\bfrench\\b|\\bfra\\b|\\bfr\\b|\\bvff\\b|\\bvfq\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-de", "imageURL": "", "isEnabled": true, "name": "\ud83c\udde9\ud83c\uddea", "pattern": "(?i)\\bgerman\\b|\\bdeu\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-it", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddee\ud83c\uddf9", "pattern": "(?i)\\bitalian\\b|\\bita\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-pt", "imageURL": "", "isEnabled": true, "name": "\ud83c\udde7\ud83c\uddf7", "pattern": "(?i)\\bportuguese\\b|\\bpor\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-ja", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddef\ud83c\uddf5", "pattern": "(?i)\\bjapanese\\b|\\bjpn\\b|[\u3040-\u309f\u30a0-\u30ff]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-ko", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddf0\ud83c\uddf7", "pattern": "(?i)\\bkorean\\b|\\bkor\\b|[\uac00-\ud7af]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-zh", "imageURL": "", "isEnabled": true, "name": "\ud83c\udde8\ud83c\uddf3", "pattern": "(?i)\\bchinese\\b|\\bchi\\b|[\u4e00-\u9fff]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-hi", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddee\ud83c\uddf3", "pattern": "(?i)\\bhindi\\b|\\bhin\\b|[\u0900-\u097f]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-ar", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddf8\ud83c\udde6", "pattern": "(?i)\\barabic\\b|\\bara\\b|[\u0600-\u06ff]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-ru", "imageURL": "", "isEnabled": true, "name": "\ud83c\uddf7\ud83c\uddfa", "pattern": "(?i)\\brussian\\b|\\brus\\b|[\u0400-\u04ff]{3,}", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}, {"borderColor": "#00000000", "groupId": "gl", "id": "l-mu", "imageURL": "", "isEnabled": true, "name": "\ud83c\udf10", "pattern": "(?i)\\bmulti\\b|\\bdual[\\s._-]?audio\\b", "tagColor": "#00000000", "tagStyle": "filled and bordered", "textColor": "#80FFFFFF", "type": "filter"}], "groups": [{"borderColor": "#FF00FF37", "color": "#27C04F", "id": "gq", "isExpanded": true, "name": "Quality"}, {"borderColor": "#FF858283", "color": "#FFBE01", "id": "gr", "isExpanded": true, "name": "Resolution"}, {"borderColor": "#FF858283", "color": "#FF6B6B", "id": "gv", "isExpanded": true, "name": "Visual"}, {"borderColor": "#00000000", "color": "#45B7D1", "id": "ga", "isExpanded": true, "name": "Audio"}, {"borderColor": "#00000000", "color": "#FFD700", "id": "gc", "isExpanded": true, "name": "Channels"}, {"borderColor": "#00000000", "color": "#4ECDC4", "id": "gl", "isExpanded": true, "name": "Language"}]};
+
+// ─── STATE ───────────────────────────────────────────────
+let ORIGINAL = JSON.parse(JSON.stringify(BADGES_DATA_INLINE));
+let state = JSON.parse(JSON.stringify(BADGES_DATA_INLINE));
+let globalStyle = { shape: 'default', size: 'md', icons: 'on', opacity: 100 };
+let selectedId = null;
+let undoStack = [];
+
+// ─── INIT ────────────────────────────────────────────────
+function init() {
+  populateGroupSelect();
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  updateNewBadgePreview();
+}
+
+// ─── RENDER SIDEBAR FILTER LIST ──────────────────────────
+function renderFilterList() {
+  const el = document.getElementById('filterList');
+  el.innerHTML = '';
+  const query = (document.getElementById('badgeSearch')?.value || '').toLowerCase().trim();
+
+  let totalVisible = 0;
+  const activeCount = state.filters.filter(f => f.isEnabled).length;
+
+  state.groups.forEach(group => {
+    let filters = state.filters.filter(f => f.groupId === group.id);
+    if (query) filters = filters.filter(f => f.name.toLowerCase().includes(query));
+    if (!filters.length) return;
+    totalVisible += filters.length;
+
+    const gHead = document.createElement('div');
+    gHead.className = 'group-header';
+    gHead.innerHTML = `
+      <div class="group-name">
+        <div class="group-dot" style="background:${androidToCss(group.color)}"></div>
+        ${group.name}
+        <span class="badge-count">${filters.length}</span>
+      </div>
+      <span class="group-chevron open">▶</span>
+    `;
+    const chevron = gHead.querySelector('.group-chevron');
+    const itemsWrap = document.createElement('div');
+    gHead.onclick = () => {
+      group.isExpanded = !group.isExpanded;
+      itemsWrap.style.display = group.isExpanded ? '' : 'none';
+      chevron.classList.toggle('open', group.isExpanded);
+    };
+    el.appendChild(gHead);
+
+    filters.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'filter-item' + (selectedId === f.id ? ' selected' : '');
+      item.dataset.id = f.id;
+      item.draggable = true;
+      item.innerHTML = `
+        <span class="drag-handle" title="Drag to reorder">⠿</span>
+        ${f.imageURL ? `<img class="filter-thumb" src="${f.imageURL}" onerror="this.style.display='none'" />` : `<span style="width:28px;font-size:13px;text-align:center">${f.name.length <= 2 ? f.name : ''}</span>`}
+        <span class="filter-name">${f.name}</span>
+        <div class="filter-toggle ${f.isEnabled ? 'on' : ''}" onclick="event.stopPropagation();toggleFilter('${f.id}',this)"></div>
+      `;
+      item.onclick = (e) => { if (!e.target.classList.contains('filter-toggle')) selectBadge(f.id); };
+
+      // Drag to reorder
+      item.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', f.id);
+        item.classList.add('dragging');
+      });
+      item.addEventListener('dragend', () => item.classList.remove('dragging'));
+      item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+      item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+        const fromId = e.dataTransfer.getData('text/plain');
+        if (fromId === f.id) return;
+        pushUndo();
+        const fromIdx = state.filters.findIndex(x => x.id === fromId);
+        const toIdx   = state.filters.findIndex(x => x.id === f.id);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = state.filters.splice(fromIdx, 1);
+        state.filters.splice(toIdx, 0, moved);
+        renderFilterList();
+        updateExport();
+      });
+
+      itemsWrap.appendChild(item);
+    });
+
+    if (!group.isExpanded && !query) itemsWrap.style.display = 'none';
+    el.appendChild(itemsWrap);
+  });
+
+  const countEl = document.getElementById('badgeCount');
+  if (countEl) {
+    countEl.textContent = query
+      ? `${totalVisible} found`
+      : `${activeCount}/${state.filters.length} active`;
+  }
+}
+
+// ─── SELECT BADGE ─────────────────────────────────────────
+function selectBadge(id) {
+  selectedId = id;
+  const f = state.filters.find(x => x.id === id);
+  if (!f) return;
+
+  document.querySelector('.sidebar').classList.add('editing');
+  document.getElementById('editTitle').querySelector('span').textContent = '✦ Editing: ' + f.name;
+  document.getElementById('editName').value = f.name;
+
+  // Populate color pickers + alpha inputs from ARGB values
+  populateColorField('editTagColor',    'editTagAlpha',    f.tagColor);
+  populateColorField('editTextColor',   'editTextAlpha',   f.textColor);
+  populateColorField('editBorderColor', 'editBorderAlpha', f.borderColor);
+
+  document.getElementById('editStyle').value = f.tagStyle || 'filled';
+  document.getElementById('editImageURL').value = f.imageURL || '';
+  document.getElementById('editPattern').value = f.pattern || '';
+
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  refreshPatternStatus();
+
+}
+
+// Populate a color picker + its alpha hex input from an ARGB or RGB hex string
+function populateColorField(pickerId, alphaId, hex) {
+  const h = (hex || '').replace('#', '');
+  let alpha = 'FF', rgb = '#000000';
+  if (h.length === 8) {
+    alpha = h.slice(0, 2).toUpperCase();
+    rgb   = '#' + h.slice(2, 8);
+  } else if (h.length === 6) {
+    alpha = 'FF';
+    rgb   = '#' + h;
+  }
+  document.getElementById(pickerId).value = rgb;
+  document.getElementById(alphaId).value  = alpha;
+}
+
+// Called when the colour wheel changes — rebuild full ARGB and save
+function onColorEdit(field) {
+  if (!selectedId) return;
+  const f = state.filters.find(x => x.id === selectedId);
+  if (!f) return;
+  pushUndo();
+  const pickMap   = { tagColor: 'editTagColor',    textColor: 'editTextColor',   borderColor: 'editBorderColor' };
+  const alphaMap  = { tagColor: 'editTagAlpha',    textColor: 'editTextAlpha',   borderColor: 'editBorderAlpha' };
+  const rgb   = document.getElementById(pickMap[field]).value.replace('#', '');
+  const alpha = (document.getElementById(alphaMap[field]).value.trim() || 'FF').padStart(2,'0').slice(0,2).toUpperCase();
+  f[field] = '#' + alpha + rgb.toUpperCase();
+  updatePreview(); updateAllBadges(); updateExport(); renderFilterList();
+}
+
+// Called when the alpha hex input changes — rebuild ARGB and save
+function onAlphaEdit(field) {
+  // Validate: allow 0-2 hex chars while typing
+  const alphaMap  = { tagColor: 'editTagAlpha', textColor: 'editTextAlpha', borderColor: 'editBorderAlpha' };
+  const el = document.getElementById(alphaMap[field]);
+  el.value = el.value.replace(/[^0-9a-fA-F]/g,'').toUpperCase().slice(0,2);
+  if (el.value.length === 2) onColorEdit(field);
+}
+
+// ─── PATTERN MATCH STATUS ─────────────────────────────────
+function refreshPatternStatus() {
+  const el = document.getElementById('patternMatchStatus');
+  const ta = document.getElementById('editPattern');
+  if (!selectedId || !el || !ta) return;
+  const pattern = ta.value.trim();
+  if (!pattern) {
+    el.textContent = '— empty'; el.className = 'match-status'; return;
+  }
+  const streamName = document.getElementById('streamName').value;
+  try {
+    let p = pattern, flags = 'i';
+    const fm = p.match(/^\(\?([a-z]+)\)/);
+    if (fm) { flags = fm[1]; p = p.slice(fm[0].length); }
+    const matched = new RegExp(p, flags).test(streamName);
+    ta.classList.remove('invalid');
+    el.textContent  = matched ? '✓ match' : '✗ no match';
+    el.className    = 'match-status ' + (matched ? 'match' : 'nomatch');
+  } catch (e) {
+    ta.classList.add('invalid');
+    el.textContent = '⚠ bad regex'; el.className = 'match-status error';
+  }
+}
+
+function updateSelected(field, val) {
+  if (!selectedId) return;
+  const f = state.filters.find(x => x.id === selectedId);
+  if (!f) return;
+  pushUndo();
+  f[field] = val;
+  if (field === 'name') document.getElementById('editTitle').querySelector('span').textContent = '✦ Editing: ' + val;
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  renderFilterList();
+}
+
+// ─── TOGGLE FILTER ────────────────────────────────────────
+function toggleFilter(id, el) {
+  const f = state.filters.find(x => x.id === id);
+  if (!f) return;
+  pushUndo();
+  f.isEnabled = !f.isEnabled;
+  el.classList.toggle('on', f.isEnabled);
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  // Re-render to update active count
+  renderFilterList();
+}
+
+// ─── ANDROID ARGB → CSS COLOR ────────────────────────────
+// Android stores colors as #AARRGGBB; CSS 8-digit hex is #RRGGBBAA.
+// This converts any Android color string to a CSS rgba() value.
+function androidToCss(hex) {
+  if (!hex) return hex;
+  const h = hex.replace('#', '');
+  if (h.length === 8) {
+    const a = parseInt(h.slice(0, 2), 16);
+    const r = parseInt(h.slice(2, 4), 16);
+    const g = parseInt(h.slice(4, 6), 16);
+    const b = parseInt(h.slice(6, 8), 16);
+    return `rgba(${r},${g},${b},${(a / 255).toFixed(3)})`;
+  }
+  // 3 or 6 digit hex — no alpha byte, use as-is
+  return '#' + h;
+}
+
+// Extract a plain #RRGGBB value from an ARGB hex for <input type="color">
+function argbToHex6(hex) {
+  if (!hex) return '#000000';
+  const h = hex.replace('#', '');
+  if (h.length === 8) return '#' + h.slice(2, 8); // strip AA prefix
+  return ('#' + h).slice(0, 7);
+}
+
+// ─── BUILD BADGE CHIP ─────────────────────────────────────
+function buildChip(f, extraClass = '') {
+  const chip = document.createElement('div');
+  chip.className = 'badge-chip';
+  if (globalStyle.shape === 'round') chip.classList.add('round');
+  if (globalStyle.shape === 'square') chip.classList.add('square');
+  if (globalStyle.size === 'sm') chip.classList.add('size-sm');
+  if (globalStyle.size === 'lg') chip.classList.add('size-lg');
+  if (extraClass) chip.classList.add(extraClass);
+
+  const tc = androidToCss(f.tagColor || '#333');
+  const textc = androidToCss(f.textColor || '#fff');
+  const bc = androidToCss(f.borderColor || f.tagColor || '#333');
+  const style = f.tagStyle || 'filled';
+
+  if (style === 'filled') {
+    chip.style.background = tc;
+    chip.style.color = textc;
+  } else if (style === 'bordered') {
+    chip.style.background = 'transparent';
+    chip.style.color = textc;
+    chip.style.border = `1px solid ${bc}`;
+  } else {
+    chip.style.background = tc;
+    chip.style.color = textc;
+    chip.style.border = `1px solid ${bc}`;
+  }
+
+  chip.style.opacity = globalStyle.opacity / 100;
+
+  let inner = '';
+  const hasImage = globalStyle.icons === 'on' && f.imageURL;
+  if (hasImage) {
+    // Image IS the badge visual — don't double up with the name text (matches Nuvio behaviour)
+    inner += `<img src="${f.imageURL}" onerror="this.style.display='none';if(this.nextSibling)this.nextSibling.style.display=''" alt="${f.name}" />`;
+    // Fallback span: hidden normally, shown only if image fails to load
+    inner += `<span style="display:none">${f.name}</span>`;
+  } else {
+    inner += `<span>${f.name}</span>`;
+  }
+  chip.innerHTML = inner;
+
+  chip.title = f.pattern;
+  chip.onclick = () => selectBadge(f.id);
+  return chip;
+}
+
+// ─── SIMPLE PATTERN MATCH ────────────────────────────────
+function matchesBadge(filter, streamName) {
+  try {
+    let pattern = filter.pattern;
+    // Extract flags
+    let flags = 'i';
+    const flagMatch = pattern.match(/^\(\?([a-z]+)\)/);
+    if (flagMatch) { flags = flagMatch[1]; pattern = pattern.slice(flagMatch[0].length); }
+    const rx = new RegExp(pattern, flags);
+    return rx.test(streamName);
+  } catch (e) { return false; }
+}
+
+// ─── UPDATE PREVIEW ──────────────────────────────────────
+function updatePreview() {
+  const streamName = document.getElementById('streamName').value;
+  const previewBadges = document.getElementById('previewBadges');
+  const allActiveBadges = document.getElementById('allActiveBadges');
+
+  previewBadges.innerHTML = '';
+  allActiveBadges.innerHTML = '';
+
+  // Matched
+  const matched = state.filters.filter(f => f.isEnabled && matchesBadge(f, streamName));
+  if (matched.length === 0) {
+    previewBadges.innerHTML = '<span style="font-family:\'Space Mono\',monospace;font-size:10px;color:var(--text-muted)">No badges matched — try editing the stream name above</span>';
+  } else {
+    matched.forEach(f => previewBadges.appendChild(buildChip(f)));
+  }
+
+  // All active
+  const enabled = state.filters.filter(f => f.isEnabled);
+  if (enabled.length === 0) {
+    allActiveBadges.innerHTML = '<span style="font-family:\'Space Mono\',monospace;font-size:10px;color:var(--text-muted)">All badges disabled</span>';
+  } else {
+    enabled.forEach(f => allActiveBadges.appendChild(buildChip(f)));
+  }
+
+  // Title from stream name
+  const titleEl = document.getElementById('previewTitle');
+  const nameMatch = streamName.match(/^([^.]+(?:\.[^.]+)?(?:\.[^.]+)?)/);
+  titleEl.textContent = nameMatch ? nameMatch[0].replace(/\./g, ' ') : streamName;
+
+  // Keep pattern match status in sync when stream name changes
+  if (selectedId) refreshPatternStatus();
+}
+
+// ─── UPDATE ALL BADGES TAB ───────────────────────────────
+function updateAllBadges() {
+  const el = document.getElementById('allBadgesContent');
+  el.innerHTML = '';
+  state.groups.forEach(group => {
+    const filters = state.filters.filter(f => f.groupId === group.id);
+    if (!filters.length) return;
+
+    const section = document.createElement('div');
+    section.style.marginBottom = '24px';
+    section.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${androidToCss(group.color)}"></div>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:${androidToCss(group.color)};letter-spacing:0.1em;text-transform:uppercase">${group.name}</span>
+        <span class="badge-count">${filters.length}</span>
+      </div>
+      <div class="badges-grid" id="group-${group.id}"></div>
+    `;
+    el.appendChild(section);
+    const grid = section.querySelector(`#group-${group.id}`);
+    filters.forEach(f => {
+      const chip = buildChip(f);
+      if (!f.isEnabled) { chip.style.opacity = '0.3'; chip.style.filter = 'grayscale(1)'; }
+      grid.appendChild(chip);
+    });
+  });
+}
+
+// ─── GLOBAL STYLE ────────────────────────────────────────
+function setGlobal(key, val, btn) {
+  globalStyle[key] = val;
+  if (btn) {
+    const grp = btn.closest('.toggle-group');
+    grp.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  updatePreview();
+  updateAllBadges();
+  updateNewBadgePreview();
+}
+
+// ─── ADD BADGE ────────────────────────────────────────────
+function populateGroupSelect() {
+  const sel = document.getElementById('newGroup');
+  sel.innerHTML = '';
+  state.groups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id; opt.textContent = g.name;
+    sel.appendChild(opt);
+  });
+}
+
+['newName','newTagColor','newTextColor','newBorderColor','newStyle','newImageURL'].forEach(id => {
+  // set up live preview update
+});
+
+function updateNewBadgePreview() {
+  const name = document.getElementById('newName')?.value || 'BADGE';
+  const tagColor = document.getElementById('newTagColor')?.value || '#e8a030';
+  const textColor = document.getElementById('newTextColor')?.value || '#ffffff';
+  const borderColor = document.getElementById('newBorderColor')?.value || tagColor;
+  const style = document.getElementById('newStyle')?.value || 'filled';
+  const imageURL = document.getElementById('newImageURL')?.value || '';
+
+  const mockFilter = { name: name || 'BADGE', tagColor, textColor, borderColor, tagStyle: style, imageURL, id: 'preview' };
+  const container = document.getElementById('newBadgePreview');
+  container.innerHTML = '';
+  container.appendChild(buildChip(mockFilter));
+}
+
+document.querySelectorAll('#newName,#newTagColor,#newTextColor,#newBorderColor,#newStyle,#newImageURL').forEach(el => {
+  el.addEventListener('input', updateNewBadgePreview);
+});
+
+function addBadge() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { showToast('⚠ Enter a badge name'); return; }
+  const newFilter = {
+    id: 'custom-' + Date.now(),
+    name,
+    groupId: document.getElementById('newGroup').value,
+    tagColor: document.getElementById('newTagColor').value,
+    textColor: document.getElementById('newTextColor').value,
+    borderColor: document.getElementById('newBorderColor').value,
+    tagStyle: document.getElementById('newStyle').value,
+    pattern: document.getElementById('newPattern').value || '(?i)\\b' + name + '\\b',
+    imageURL: document.getElementById('newImageURL').value,
+    isEnabled: true,
+    type: 'filter'
+  };
+  pushUndo();
+  state.filters.push(newFilter);
+  document.getElementById('newName').value = '';
+  document.getElementById('newPattern').value = '';
+  document.getElementById('newImageURL').value = '';
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  showToast('✓ Badge "' + name + '" added!');
+  switchTab('preview', document.querySelector('.tab'));
+}
+
+// ─── LOAD JSON FROM FILE ─────────────────────────────────
+function triggerLoad() {
+  document.getElementById('jsonFileInput').value = ''; // reset so same file can be re-loaded
+  document.getElementById('jsonFileInput').click();
+}
+
+function loadJSONFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+
+      // Validate: must have filters array
+      if (!parsed.filters || !Array.isArray(parsed.filters)) {
+        showToast('⚠ Invalid JSON — no "filters" array found');
+        return;
+      }
+
+      // Load into state
+      state = parsed;
+      ORIGINAL = JSON.parse(JSON.stringify(parsed)); // Reset baseline = loaded file
+      undoStack = [];
+
+      // If no groups key, build a minimal one from groupIds in filters
+      if (!state.groups || !state.groups.length) {
+        const groupIds = [...new Set(state.filters.map(f => f.groupId).filter(Boolean))];
+        state.groups = groupIds.map(id => ({
+          id, name: id, color: '#888', borderColor: '#888', isExpanded: true
+        }));
+      }
+
+      selectedId = null;
+      document.querySelector('.sidebar').classList.remove('editing');
+
+      // Update filename display (both in header area and export tab)
+      const nameEl = document.getElementById('loadedFileName');
+      if (nameEl) nameEl.textContent = '✓ ' + file.name;
+
+      populateGroupSelect();
+      renderFilterList();
+      updatePreview();
+      updateAllBadges();
+      updateExport();
+      showToast('✓ Loaded ' + file.name + ' (' + state.filters.length + ' badges)');
+
+    } catch (err) {
+      showToast('⚠ Could not parse JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─── EXPORT ──────────────────────────────────────────────
+function updateExport() {
+  document.getElementById('exportArea').textContent = JSON.stringify(state, null, 2);
+  const countEl = document.getElementById('badgeCountExport');
+  if (countEl) countEl.textContent = state.filters.length + ' badges · ' + state.groups.length + ' groups';
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+  const btn = document.getElementById('exportBtn');
+  showToast('✓ JSON copied to clipboard!');
+}
+
+function copyFiltersOnly() {
+  navigator.clipboard.writeText(JSON.stringify(state.filters, null, 2));
+  showToast('✓ Filters JSON copied!');
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nuvio-badges.json';
+  a.click();
+  showToast('✓ nuvio-badges.json downloaded!');
+}
+
+function resetAll() {
+  state = JSON.parse(JSON.stringify(ORIGINAL));
+  selectedId = null;
+  undoStack = [];
+  document.getElementById('undoBtn').disabled = true;
+  document.querySelector('.sidebar').classList.remove('editing');
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  showToast('↺ Reset to original config');
+}
+
+// ─── TABS ─────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(name) || (name==='add' && t.textContent.includes('Add'))) t.classList.add('active');
+  });
+  if (name === 'export') updateExport();
+  if (name === 'all') updateAllBadges();
+}
+// Fix tab active for clicks
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ─── TOAST ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+
+
+// ─── UNDO ─────────────────────────────────────────────────
+function pushUndo() {
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > 50) undoStack.shift();
+  document.getElementById('undoBtn').disabled = false;
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  state = JSON.parse(undoStack.pop());
+  if (!undoStack.length) document.getElementById('undoBtn').disabled = true;
+  // If selected badge no longer exists, close edit panel
+  if (selectedId && !state.filters.find(x => x.id === selectedId)) {
+    selectedId = null;
+    document.querySelector('.sidebar').classList.remove('editing');
+  }
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  showToast('↩ Undone');
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+});
+
+// ─── DELETE BADGE ─────────────────────────────────────────
+function deleteSelected() {
+  if (!selectedId) return;
+  const f = state.filters.find(x => x.id === selectedId);
+  if (!f) return;
+  if (!confirm(`Delete badge "${f.name}"? This cannot be undone from the delete button (use Undo / Ctrl+Z).`)) return;
+  pushUndo();
+  state.filters = state.filters.filter(x => x.id !== selectedId);
+  selectedId = null;
+  document.querySelector('.sidebar').classList.remove('editing');
+  renderFilterList();
+  updatePreview();
+  updateAllBadges();
+  updateExport();
+  showToast('✕ Badge deleted');
+}
+
+// ─── DEBOUNCE ─────────────────────────────────────────────
+let _patternDebounceTimer = null;
+function debouncedPatternUpdate(val) {
+  clearTimeout(_patternDebounceTimer);
+  refreshPatternStatus();
+  _patternDebounceTimer = setTimeout(() => {
+    updateSelected('pattern', val);
+  }, 150);
+}
+
+// ─── MOBILE SIDEBAR ───────────────────────────────────────
+function openSidebar() {
+  document.querySelector('.sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+init();
+</script>
+</body>
+</html>
